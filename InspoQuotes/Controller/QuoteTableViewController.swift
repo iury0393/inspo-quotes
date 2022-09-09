@@ -9,7 +9,7 @@ import UIKit
 import StoreKit
 
 class QuoteTableViewController: UITableViewController, SKPaymentTransactionObserver {
-    let productID = ProcessInfo.processInfo.environment["PRODUCT_ID"]
+    let productID = ProcessInfo.processInfo.environment["PRODUCT_ID"]!
 
     var quotesToShow = [
         "Our greatest glory is not in never falling, but in rising every time we fall. — Confucius",
@@ -32,12 +32,19 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
     override func viewDidLoad() {
         super.viewDidLoad()
         SKPaymentQueue.default().add(self)
+        if isPurchased() {
+            showPremiumQuotes()
+        }
     }
 
     // MARK: - Table view data source
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return quotesToShow.count + 1
+        if isPurchased() {
+            return quotesToShow.count
+        } else {
+            return quotesToShow.count + 1
+        }
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -46,6 +53,8 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
         
         if indexPath.row < quotesToShow.count {
             content.text = quotesToShow[indexPath.row]
+            content.textProperties.color = UIColor.black
+            cell.accessoryType = .none
             cell.contentConfiguration = content
         } else {
             content.text = "Get More Quotes"
@@ -73,7 +82,7 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
         if SKPaymentQueue.canMakePayments() {
             
             let paymentRequest = SKMutablePayment()
-            paymentRequest.productIdentifier = productID!
+            paymentRequest.productIdentifier = productID
             SKPaymentQueue.default().add(paymentRequest)
             
         } else {
@@ -85,6 +94,8 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
         
         for transaction in transactions {
             if transaction.transactionState == .purchased {
+                showPremiumQuotes()
+                UserDefaults.standard.set(true, forKey: productID)
                 SKPaymentQueue.default().finishTransaction(transaction)
             } else if transaction.transactionState == .failed {
                 
@@ -95,6 +106,23 @@ class QuoteTableViewController: UITableViewController, SKPaymentTransactionObser
                 
                 SKPaymentQueue.default().finishTransaction(transaction)
             }
+        }
+    }
+    
+    func showPremiumQuotes() {
+        quotesToShow.append(contentsOf: premiumQuotes)
+        tableView.reloadData()
+    }
+    
+    func isPurchased() -> Bool {
+        let purchaseStatus = UserDefaults.standard.bool(forKey: productID)
+        
+        if purchaseStatus {
+            print("Previously Purchased")
+            return true
+        } else {
+            print("Never Purchased")
+            return false
         }
     }
     
